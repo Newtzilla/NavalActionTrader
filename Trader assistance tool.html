@@ -1,0 +1,471 @@
+<html>
+    <head>
+        <title>Trader assistance tool</title>
+        <script src="http://cdn.webix.com/edge/webix.js" type="text/javascript"></script>
+ 
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+        <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+ 
+        <link rel="stylesheet" href="http://cdn.webix.com/edge/webix.css" type="text/css">
+ 
+    </head>
+ 
+<body>
+    <div id="shards"></div>
+    <div id="search"></div>
+    <div id="results"></div>
+    <script>
+        var getShopFromId = function (id) {
+            for (i = 0; i < Shops.length; i++) {
+                if (Shops[i].Id == id) {
+                    return Shops[i];
+                }
+            }
+            return null;
+        };
+ 
+        // get port by id
+        var getPortFromId = function (id) {
+            for (i = 0; i < Ports.length; i++) {
+                if (Ports[i].Id == id) {
+                    return Ports[i];
+                }
+            }
+            return "PORT NOT FOUND";
+        };
+ 
+        // get nation from index
+        var getNationFromIdx = function (idx) {
+            return Nations.Nations[idx];
+        };
+ 
+        var getNationFromName = function (name) {
+            for (var i = 0; i < Nations.Nations.length; i++) {
+                if (Nations.Nations[i].Name == name) {
+                    return Nations.Nations[i];
+                }
+            }
+            return null;
+        };
+ 
+        var getNationIdxFromName = function (name) {
+            for (var i = 0; i < Nations.Nations.length; i++) {
+                if (Nations.Nations[i].Name == name) {
+                    return i;
+                }
+            }
+            return 0;
+        };
+ 
+        var getPortFromName = function (name) {
+            for (var i = 0; i < Ports.length; i++) {
+                if (Ports[i].Name == name) {
+                    return Ports[i];
+                }
+            }
+            return null;
+        };
+ 
+        // get item template from id
+        var getItemTemplateFromId = function (id) {
+            for (var itemTemplateIdx = 0; itemTemplateIdx < ItemTemplates.length; itemTemplateIdx++) {
+                if (ItemTemplates[itemTemplateIdx].Id == id) {
+                    return ItemTemplates[itemTemplateIdx];
+                }
+            }
+            return null;
+        };
+ 
+        // get item template from name
+        var getItemTemplateFromName = function (name, ignoreClasses) {
+            for (var itemTemplateIdx = 0; itemTemplateIdx < ItemTemplates.length; itemTemplateIdx++) {
+                if (ignoreClasses != null && ItemTemplates[itemTemplateIdx].ItemType.indexOf(ignoreClasses) != -1)
+                {
+                    continue;
+                }
+                if (ItemTemplates[itemTemplateIdx].Name == name) {
+                    return ItemTemplates[itemTemplateIdx];
+                }
+            }
+            return null;
+        };
+       
+        var distance_XZ = function (p0, p1) {
+            return (p0.x - p1.x) * (p0.x - p1.x) + (p0.z - p1.z) * (p0.z - p1.z);
+        };
+       
+        var distance_XY = function (p0, p1) {
+            return (p0.x - p1.x) * (p0.x - p1.x) + (p0.y - p1.y) * (p0.y - p1.y);
+        };
+    </script>
+ 
+    <script>
+        function showTradersTool()
+        {
+            var searchAroundPort = null;
+            var searchDistance = 0;
+ 
+            var suggestions = [];
+            var portSuggestions = [];
+ 
+            var nationSelector = [];
+            var nationsEnabled = [];
+            for (var i = 0; i < Nations.Nations.length; i++) {
+                nationSelector.push(
+                    {
+                        view: "toggle", label: Nations.Nations[i].Name, value: 1, onIcon: "check-square-o", offIcon: "square-o", type: "icon", id: "nationSelector_" + i.toString(),
+                        on: {
+                            onChange: function (value, obj) {
+                                for (var i = 0; i < nationsEnabled.length; i++) {
+                                    nationsEnabled[i] = $$('nationSelector_' + i.toString()).getValue() == 1;
+                                }
+                                setupData();
+                            }
+                        }
+                    });
+                nationsEnabled.push(true);
+            }
+ 
+            var templateNames = [];
+            for (var t in ItemTemplates) {
+                if (ItemTemplates[t].__type.indexOf("MaterialTemplate") != -1
+                    || ItemTemplates[t].__type.indexOf("ResourceTemplate") != -1) {
+                    suggestions.push(ItemTemplates[t].Name);
+                    templateNames.push(ItemTemplates[t].Name);
+                }
+            }
+ 
+            var shopNames = [];
+            for (var p in Shops) {
+                suggestions.push(getPortFromId(Shops[p].Id).Name);
+                shopNames.push(getPortFromId(Shops[p].Id).Name);
+                portSuggestions.push(getPortFromId(Shops[p].Id).Name);
+            }
+ 
+            function skipPort(id) {
+                var port = getPortFromId(id);
+ 
+                if (!nationsEnabled[port.Nation]) {
+                    return true;
+                }
+ 
+                if (searchAroundPort == null) {
+                    return false;
+                }
+ 
+                if (distance_XY(searchAroundPort.sourcePosition, port.sourcePosition) > searchDistance) {
+                    return true;
+                }
+ 
+                return false;
+            }
+ 
+            var setupItemData = function (itemName) {
+                var itemId = 0;
+                var info = "";
+                info += "<h1>" + itemName + "</h1>";
+ 
+                var item = getItemTemplateFromName(itemName, "Recipe");
+ 
+                // produced
+                info += "<h3>Produced</h3>";
+                info += "<ul class=\"list-group\">";
+                for (var i = 0; i < Shops.length; i++) {
+                    for (var p = 0; p < Shops[i].ResourcesProduced.length; p++) {
+                        if (skipPort(Shops[i].Id)) continue;
+ 
+                        if (Shops[i].ResourcesProduced[p].Key == item.Id) {
+                            info += " <span class=\"label label-default\">" + "<span class=\"label label-success label-pill pull-xs-left\">"
+                                        + (Shops[i].ResourcesProduced[p].Value * 24) + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
+                            break;
+                        }
+                    }
+                }
+                info += "</ul>";
+ 
+                // consumed
+                info += "<h3>Consumed</h3>";
+                info += "<ul class=\"list-group\">";
+                for (var i = 0; i < Shops.length; i++) {
+                    for (var p = 0; p < Shops[i].ResourcesConsumed.length; p++) {
+                        if (skipPort(Shops[i].Id)) continue;
+ 
+                        if (Shops[i].ResourcesConsumed[p].Key == item.Id) {
+                            info += " <span class=\"label label-default\">" + "<span class=\"label label-success label-pill pull-xs-left\">"
+                                        + (Shops[i].ResourcesConsumed[p].Value * 24) + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
+                            break;
+                        }
+                    }
+                }
+                info += "</ul>";
+ 
+                // available
+                info += "<h3>Available</h3>";
+                //info += " <span class=\"label label-default\">"
+                //            + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
+                //            + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
+                //            + "<span class=\"label label-info label-pill pull-xs-left\">" + "buys" + "</span> "
+                //            + "port name" + "</span> ";
+                //info += "<br/>";
+                //info += "<br/>";
+ 
+                info += "<ul class=\"list-group\">";
+                for (var i = 0; i < Shops.length; i++) {
+                    if (skipPort(Shops[i].Id)) continue;
+ 
+                    for (var p = 0; p < Shops[i].RegularItems.length; p++) {
+                        if (Shops[i].RegularItems[p].TemplateId == item.Id) {
+                            var amount = Shops[i].RegularItems[p].Quantity;
+                            var sellPrice = Shops[i].RegularItems[p].SellPrice;
+                            var buyPrice = Shops[i].RegularItems[p].BuyPrice;
+ 
+                            info += " <span class=\"label label-default\">"
+                                        + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "
+                                        + "<span class=\"label label-danger label-pill pull-xs-left\">" + buyPrice + "</span> "
+                                        + "<span class=\"label label-info label-pill pull-xs-left\">" + sellPrice + "</span> "
+                                        + getPortFromId(Shops[i].Id).Name + "</span> ";
+ 
+                            break;
+                        }
+                    }
+                }
+                info += "</ul>";
+ 
+                document.getElementById("results").innerHTML = info;
+            };
+ 
+            var setupShopData = function (portName) {
+                var info = "";
+                info += "<h1>" + portName + "</h1>";
+ 
+                var port = getPortFromName(portName);
+                var portShop = getShopFromId(port.Id);
+ 
+                // Produces
+                info += "<h3>Produces</h3>";
+                for (var p = 0; p < portShop.ResourcesProduced.length; p++) {
+                    var item = getItemTemplateFromId(portShop.ResourcesProduced[p].Key);
+                    var amount = portShop.ResourcesProduced[p].Value * 24;
+                    info += " <span class=\"label label-default\">" + "<span class=\"label label-success label-pill pull-xs-left\">" + amount + "</span> " + item.Name + "</span> ";
+                }
+ 
+                // Consumes
+                info += "<h3>Consumes</h3>";
+                info += "<ul class=\"list-group\">";
+                for (var p = 0; p < portShop.ResourcesConsumed.length; p++) {
+                    var item = getItemTemplateFromId(portShop.ResourcesConsumed[p].Key);
+                    var amount = portShop.ResourcesConsumed[p].Value * 24;
+                    info += " <span class=\"label label-default\">" + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> " + item.Name + "</span> ";
+                }
+                info += "</ul>";
+ 
+                // Stock
+                info += "<h3>Stock</h3>";
+                info += " <span class=\"label label-default\">"
+                            + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
+                            + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
+                            + "<span class=\"label label-info label-pill pull-xs-left\">" + "buys" + "</span> "
+                            + "item name" + "</span> ";
+                info += "<br/>";
+                info += "<br/>";
+ 
+                //info += "<ul class=\"list-group\">";
+                for (var p = 0; p < portShop.RegularItems.length; p++) {
+                    var item = getItemTemplateFromId(portShop.RegularItems[p].TemplateId);
+                    var amount = portShop.RegularItems[p].Quantity;
+                    var sellPrice = portShop.RegularItems[p].SellPrice;
+                    var buyPrice = portShop.RegularItems[p].BuyPrice;
+ 
+                    info += " <span class=\"label label-default\">"
+                                + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "
+                                + "<span class=\"label label-danger label-pill pull-xs-left\">" + buyPrice + "</span> "
+                                + "<span class=\"label label-info label-pill pull-xs-left\">" + sellPrice + "</span> "
+                                + item.Name + "</span> ";
+                }
+                //info += "</ul>";
+ 
+                document.getElementById("results").innerHTML = info;
+            };
+ 
+            function setupData() {
+                var name = $$('searchCombo').getValue();
+                var searchAround = $$('searchAroundCombo').getValue();
+                var distance = $$('radiusSlider').getValue();
+ 
+                searchAroundPort = getPortFromName(searchAround);
+                searchDistance = distance_XY({ x: -4096, y: -4096 }, { x: 4096, y: 4096 }) * (distance / 100.0) * (distance / 100.0);
+ 
+                console.log(name + ", " + searchAround + ", " + searchDistance);
+ 
+                if (templateNames.indexOf(name) != -1) {
+                    setupItemData(name);
+                    showItemFilters(true);
+                }
+                if (shopNames.indexOf(name) != -1) {
+                    setupShopData(name);
+                    showItemFilters(false);
+                }
+            }
+ 
+            //console.info(shopsData);
+            webix.ui(
+                {
+                    container: "search",
+                    rows:
+                        [
+                            {
+                                cols:
+                                    [
+                                        {
+                                            view: "combo", label: "Port or item name:", labelWidth: 150, suggest: suggestions, id: "searchCombo",
+                                            on: {
+                                                onChange: function () {
+                                                    setupData();
+                                                }
+                                            }
+                                        }
+                                    ]
+                            },
+                            {
+                                cols:
+                                    [
+                                        {
+                                            view: "combo", label: "Search around port:", labelPosition: "left", labelWidth: 150, suggest: portSuggestions, id: "searchAroundCombo",
+                                            on: {
+                                                onChange: function () {
+                                                    var name = $$('searchAroundCombo').getValue();
+                                                    setupData();
+                                                }
+                                            }
+                                        },
+                                        {
+                                            view: "slider", type: "alt", label: "Search distance:", labelWidth: 150, value: "100", id: "radiusSlider", on:
+                                                {
+                                                    onChange: function () {
+                                                        setupData();
+                                                    }
+                                                }
+                                        }
+                                    ]
+                            },
+                            {
+                                cols: nationSelector
+                            }
+                        ]
+                });
+ 
+            function showItemFilters(show) {
+                if (show)
+                {
+                    $$('searchAroundCombo').enable();
+                    $$('radiusSlider').enable();
+                    for (var i = 0; i < nationSelector.length; i++) {
+                        $$('nationSelector_' + i.toString()).enable();
+                    }
+                } else
+                {
+                    $$('searchAroundCombo').disable();
+                    $$('radiusSlider').disable();
+                    for (var i = 0; i < nationSelector.length; i++) {
+                        $$('nationSelector_' + i.toString()).disable();
+                    }
+                }
+            }
+            showItemFilters(false);
+        }
+    </script>
+ 
+    <script>
+        function startTradersTool() {
+            if (typeof Ports === 'undefined'
+                || typeof Nations === 'undefined'
+                || typeof ItemTemplates === 'undefined'
+                || typeof Shops === 'undefined'
+                ) {
+                console.log("Data is missing");
+ 
+                var text = "";
+ 
+                text += "<a class=\"navbar-brand\" href=\"#\">" + "Data is missing" + "</a>";
+                text += "<a href=\"#\" onclick=\"window.location.reload(true);\">Change server/Reload</a>";
+ 
+                document.getElementById("shards").innerHTML = text;
+            } else {
+                showTradersTool();
+            }
+        }
+ 
+        var shards = [];
+        var realmConfigPath = "";
+ 
+        function setActiveRealms(data)
+        {
+            shards = [];
+            for (var i = 0; i < data.data.length; i++) {
+                shards.push({ name: data.data[i].title, url: data.data[i].name });
+            }
+            realmConfigPath = "https://storage.googleapis.com/nacleanopenworldprodshards/";
+           
+            showShardSelector();
+        }
+ 
+        var usePublicShards = true;
+        if (usePublicShards)
+        {
+            var apiKey = "1ZptRtpXAyEaBe2SEp63To1aLmISuJj3Gxcl5ivl"; // TEMP, should be obtained from Slik
+            var serverListPath = "http://api.shipsofwar.net/servers?apikey=" + apiKey + "&callback=setActiveRealms";
+ 
+            $.ajax({ url: serverListPath, dataType: 'jsonp', jsonpCallback: 'setActiveRealms'});
+        }
+ 
+        function showShardSelector() {
+            var shardSelector = "";
+ 
+            shardSelector += "Please select realm: ";
+            for (var i = 0; i < shards.length; i++)
+            {
+                shardSelector += "<button type=\"button\" class=\"btn btn-default\" onclick=\"selectShard('" + shards[i].url + "')\">" + shards[i].name + "</button>";
+            }
+ 
+            document.getElementById("shards").innerHTML = shardSelector;
+        }
+ 
+        function loadScript(name)
+        {
+            return $.getScript(realmConfigPath + name + ".json");
+        }
+ 
+        function changeRealm()
+        {
+            location.reload();
+        }
+ 
+        function createShardSelector(name)
+        {
+            var text = "";
+ 
+            text += "<a class=\"navbar-brand\" href=\"#\">" + name + "</a>";
+            text += "<a href=\"#\" onclick=\"window.location.reload(true);\">change</a>";
+ 
+            document.getElementById("shards").innerHTML = text;
+        }
+ 
+        function selectShard(name)
+        {
+            document.getElementById("shards").innerHTML = "Loading data for " + name;
+            loadScript("ItemTemplates_" + name).done(loadScript("Ports_" + name).done(loadScript("Nations_" + name).done(loadScript("Shops_" + name).done(
+                function () {
+                    startTradersTool();
+                    createShardSelector(name);
+                }))));
+        }
+ 
+        if (!usePublicShards) {
+            showShardSelector();
+        }
+    </script>
+ 
+</body>
+ 
+</html>
