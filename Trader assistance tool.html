@@ -8,7 +8,17 @@
         <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
  
         <link rel="stylesheet" href="http://cdn.webix.com/edge/webix.css" type="text/css">
- 
+        <style>
+            table, th, td {
+              border: 1px solid black;
+            }
+            th, td {
+            padding: 15px;
+            }
+            th {
+            cursor: pointer;
+            }
+        </style>
     </head>
  
 <body>
@@ -164,12 +174,12 @@
             var setupItemData = function (itemName) {
                 var itemId = 0;
                 var info = "";
-                info += "<h1>" + itemName + "</h1>";
+                info += "<td>" + itemName + "</td>";
  
                 var item = getItemTemplateFromName(itemName, "Recipe");
  
                 // produced
-                info += "<h3>Produced</h3>";
+                info += "<td>";
                 info += "<ul class=\"list-group\">";
                 for (var i = 0; i < Shops.length; i++) {
                     for (var p = 0; p < Shops[i].ResourcesProduced.length; p++) {
@@ -182,13 +192,13 @@
                         }
                     }
                 }
-                info += "</ul>";
+                info += "</ul></td>";
 
                 var max_sell = -1;
                 var min_buy = 99999;
  
                 // consumed
-                info += "<h3>Consumed</h3>";
+                info += "<td>";
                 info += "<ul class=\"list-group\">";
                 for (var i = 0; i < Shops.length; i++) {
                     for (var p = 0; p < Shops[i].ResourcesConsumed.length; p++) {
@@ -204,10 +214,10 @@
                         }
                     }
                 }
-                info += "</ul>";
+                info += "</ul></td>";
  
                 // available
-                info += "<h3>Available</h3>";
+                info += "<td>";
                 //info += " <span class=\"label label-default\">"
                 //            + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
                 //            + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
@@ -248,11 +258,13 @@
                         }
                     }
                 }
-                info += "<h3>" + (max_sell - min_buy) + "</h3>"
-                info += "</ul>";
+                info += "</ul></td>";                
+                info += "<td>" + (max_sell - min_buy).toFixed(0) + "</td>";
                 
                 if(max_sell > min_buy)
-                    document.getElementById("results").innerHTML += info;
+                    return "<tr>" + info + "</tr>";
+                return "";
+                    //document.getElementById("results").innerHTML += "<tr>" + info + "</tr>";
             };
  
             var setupShopData = function (portName) {
@@ -309,6 +321,7 @@
             };
  
             function setupData() {
+                var content = "<table id=\"myTable2\" style=\"width:100%\"><tr><th onclick=\"sortTable(0)\">Item</th><th>Produced</th><th>Consumed</th><th>Available</th><th onclick=\"sortTableNumeric(4)\">Profit</th></tr>";
                 document.getElementById("results").innerHTML = "";
 
                 var name = $$('searchCombo').getValue();
@@ -323,9 +336,11 @@
                 for (var t in ItemTemplates) {
                  if (ItemTemplates[t].ItemType == "Resource"
                      || ItemTemplates[t].ItemType == "Material") {
-                    setupItemData(ItemTemplates[t].Name);
+                    content += setupItemData(ItemTemplates[t].Name);
                 }
                 }
+                content += "</table>"
+                 document.getElementById("results").innerHTML = content;
  
                 if (templateNames.indexOf(name) != -1) {
                     setupItemData(name);
@@ -488,13 +503,104 @@
                 setTimeout(function () {
                     startTradersTool();
                     createShardSelector(name);
-                },5000)))));
+                },2000)))));
         }
  
         if (!usePublicShards) {
             showShardSelector();
         }
     </script>
+    <script>
+        function sortTable(n) {
+          var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+          table = document.getElementById("myTable2");
+          switching = true;
+          // Set the sorting direction to ascending:
+          dir = "asc"; 
+          /* Make a loop that will continue until
+          no switching has been done: */
+          while (switching) {
+            // Start by saying: no switching is done:
+            switching = false;
+            rows = table.rows;
+            /* Loop through all table rows (except the
+            first, which contains table headers): */
+            for (i = 1; i < (rows.length - 1); i++) {
+              // Start by saying there should be no switching:
+              shouldSwitch = false;
+              /* Get the two elements you want to compare,
+              one from current row and one from the next: */
+              x = rows[i].getElementsByTagName("TD")[n];
+              y = rows[i + 1].getElementsByTagName("TD")[n];
+              /* Check if the two rows should switch place,
+              based on the direction, asc or desc: */
+              if (dir == "asc") {
+                if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                  // If so, mark as a switch and break the loop:
+                  shouldSwitch = true;
+                  break;
+                }
+              } else if (dir == "desc") {
+                if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                  // If so, mark as a switch and break the loop:
+                  shouldSwitch = true;
+                  break;
+                }
+              }
+            }
+            if (shouldSwitch) {
+              /* If a switch has been marked, make the switch
+              and mark that a switch has been done: */
+              rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+              switching = true;
+              // Each time a switch is done, increase this count by 1:
+              switchcount ++; 
+            } else {
+              /* If no switching has been done AND the direction is "asc",
+              set the direction to "desc" and run the while loop again. */
+              if (switchcount == 0 && dir == "asc") {
+                dir = "desc";
+                switching = true;
+              }
+            }
+          }
+        }
+
+        function sortTableNumeric(n) {
+  var table, rows, switching, i, x, y, shouldSwitch;
+  table = document.getElementById("myTable2");
+  switching = true;
+  /*Make a loop that will continue until
+  no switching has been done:*/
+  while (switching) {
+    //start by saying: no switching is done:
+    switching = false;
+    rows = table.rows;
+    /*Loop through all table rows (except the
+    first, which contains table headers):*/
+    for (i = 1; i < (rows.length - 1); i++) {
+      //start by saying there should be no switching:
+      shouldSwitch = false;
+      /*Get the two elements you want to compare,
+      one from current row and one from the next:*/
+      x = rows[i].getElementsByTagName("TD")[n];
+      y = rows[i + 1].getElementsByTagName("TD")[n];
+      //check if the two rows should switch place:
+      if (Number(x.innerHTML) < Number(y.innerHTML)) {
+        //if so, mark as a switch and break the loop:
+        shouldSwitch = true;
+        break;
+      }
+    }
+    if (shouldSwitch) {
+      /*If a switch has been marked, make the switch
+      and mark that a switch has been done:*/
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+    }
+  }
+}
+        </script>
  
 </body>
  
