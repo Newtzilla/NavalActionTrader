@@ -129,8 +129,8 @@
  
             var templateNames = [];
             for (var t in ItemTemplates) {
-                if (ItemTemplates[t].__type.indexOf("MaterialTemplate") != -1
-                    || ItemTemplates[t].__type.indexOf("ResourceTemplate") != -1) {
+                 if (ItemTemplates[t].__type.indexOf("MaterialTemplate") != -1
+                     || ItemTemplates[t].__type.indexOf("ResourceTemplate") != -1) {
                     suggestions.push(ItemTemplates[t].Name);
                     templateNames.push(ItemTemplates[t].Name);
                 }
@@ -183,6 +183,9 @@
                     }
                 }
                 info += "</ul>";
+
+                var max_sell = -1;
+                var min_buy = 99999;
  
                 // consumed
                 info += "<h3>Consumed</h3>";
@@ -193,7 +196,10 @@
  
                         if (Shops[i].ResourcesConsumed[p].Key == item.Id) {
                             info += " <span class=\"label label-default\">" + "<span class=\"label label-success label-pill pull-xs-left\">"
-                                        + (Shops[i].ResourcesConsumed[p].Value * 24) + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
+                                        + item.PortPrices.Consumed.SellPrice.Min /*(Shops[i].ResourcesConsumed[p].Value * 24)*/ + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
+                            if(item.PortPrices.Consumed.SellPrice.Min > max_sell){
+                                max_sell = item.PortPrices.Consumed.SellPrice.Min;
+                            }
                             break;
                         }
                     }
@@ -219,6 +225,18 @@
                             var amount = Shops[i].RegularItems[p].Quantity;
                             var sellPrice = Shops[i].RegularItems[p].SellPrice;
                             var buyPrice = Shops[i].RegularItems[p].BuyPrice;
+                            var tax = getPortFromId(Shops[i].Id).PortTax;
+                            var modifiedBuy = buyPrice + buyPrice*tax;
+
+                            if(sellPrice > max_sell){
+                                max_sell = sellPrice;
+                            }
+
+                            if(modifiedBuy < min_buy && amount > 0)
+                            {
+                                min_buy = modifiedBuy;
+                            }
+
  
                             info += " <span class=\"label label-default\">"
                                         + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "
@@ -230,9 +248,11 @@
                         }
                     }
                 }
+                info += "<h3>" + (max_sell - min_buy) + "</h3>"
                 info += "</ul>";
- 
-                document.getElementById("results").innerHTML = info;
+                
+                if(max_sell > min_buy)
+                    document.getElementById("results").innerHTML += info;
             };
  
             var setupShopData = function (portName) {
@@ -289,6 +309,8 @@
             };
  
             function setupData() {
+                document.getElementById("results").innerHTML = "";
+
                 var name = $$('searchCombo').getValue();
                 var searchAround = $$('searchAroundCombo').getValue();
                 var distance = $$('radiusSlider').getValue();
@@ -297,6 +319,13 @@
                 searchDistance = distance_XY({ x: -4096, y: -4096 }, { x: 4096, y: 4096 }) * (distance / 100.0) * (distance / 100.0);
  
                 console.log(name + ", " + searchAround + ", " + searchDistance);
+
+                for (var t in ItemTemplates) {
+                 if (ItemTemplates[t].ItemType == "Resource"
+                     || ItemTemplates[t].ItemType == "Material") {
+                    setupItemData(ItemTemplates[t].Name);
+                }
+                }
  
                 if (templateNames.indexOf(name) != -1) {
                     setupItemData(name);
@@ -378,7 +407,7 @@
  
     <script>
         function startTradersTool() {
-            if (typeof Ports === 'undefined'
+            while (typeof Ports === 'undefined'
                 || typeof Nations === 'undefined'
                 || typeof ItemTemplates === 'undefined'
                 || typeof Shops === 'undefined'
@@ -391,9 +420,10 @@
                 text += "<a href=\"#\" onclick=\"window.location.reload(true);\">Change server/Reload</a>";
  
                 document.getElementById("shards").innerHTML = text;
-            } else {
-                showTradersTool();
-            }
+            } 
+
+            showTradersTool();
+
         }
  
         var shards = [];
@@ -455,10 +485,10 @@
         {
             document.getElementById("shards").innerHTML = "Loading data for " + name;
             loadScript("ItemTemplates_" + name).done(loadScript("Ports_" + name).done(loadScript("Nations_" + name).done(loadScript("Shops_" + name).done(
-                function () {
+                setTimeout(function () {
                     startTradersTool();
                     createShardSelector(name);
-                }))));
+                },5000)))));
         }
  
         if (!usePublicShards) {
