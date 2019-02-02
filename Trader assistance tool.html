@@ -139,11 +139,11 @@
  
             var templateNames = [];
             for (var t in ItemTemplates) {
-                 if (ItemTemplates[t].__type.indexOf("MaterialTemplate") != -1
-                     || ItemTemplates[t].__type.indexOf("ResourceTemplate") != -1) {
+                //  if (ItemTemplates[t].__type.indexOf("MaterialTemplate") != -1
+                //      || ItemTemplates[t].__type.indexOf("ResourceTemplate") != -1) {
                     suggestions.push(ItemTemplates[t].Name);
                     templateNames.push(ItemTemplates[t].Name);
-                }
+                //}
             }
  
             var shopNames = [];
@@ -171,29 +171,18 @@
                 return false;
             }
  
-            var setupItemData = function (itemName) {
+            var setupItemData = function (itemName, showAlways) {
                 var itemId = 0;
                 var info = "";
                 info += "<td>" + itemName + "</td>";
  
                 var item = getItemTemplateFromName(itemName, "Recipe");
- 
-                // produced
-                info += "<td>";
-                info += "<ul class=\"list-group\">";
-                for (var i = 0; i < Shops.length; i++) {
-                    for (var p = 0; p < Shops[i].ResourcesProduced.length; p++) {
-                        if (skipPort(Shops[i].Id)) continue;
- 
-                        if (Shops[i].ResourcesProduced[p].Key == item.Id) {
-                            info += " <span class=\"label label-default\">" + "<span class=\"label label-success label-pill pull-xs-left\">"
-                                        + (Shops[i].ResourcesProduced[p].Value * 24) + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
-                            break;
-                        }
-                    }
-                }
-                info += "</ul></td>";
+                if(item==null)
+                    return "";
 
+                var seller=[];
+                var buyer=[];
+ 
                 var max_sell = -1;
                 var min_buy = 99999;
  
@@ -201,15 +190,19 @@
                 info += "<td>";
                 info += "<ul class=\"list-group\">";
                 for (var i = 0; i < Shops.length; i++) {
-                    for (var p = 0; p < Shops[i].ResourcesConsumed.length; p++) {
-                        if (skipPort(Shops[i].Id)) continue;
+                    if (skipPort(Shops[i].Id)) continue;
+                    for (var p = 0; p < Shops[i].ResourcesConsumed.length; p++) {                        
  
                         if (Shops[i].ResourcesConsumed[p].Key == item.Id) {
                             info += " <span class=\"label label-default\">" + "<span class=\"label label-success label-pill pull-xs-left\">"
-                                        + item.PortPrices.Consumed.SellPrice.Min /*(Shops[i].ResourcesConsumed[p].Value * 24)*/ + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
-                            if(item.PortPrices.Consumed.SellPrice.Min > max_sell){
-                                max_sell = item.PortPrices.Consumed.SellPrice.Min;
-                            }
+                                        + item.PortPrices.Consumed.SellPrice.Min + "," + item.PortPrices.Consumed.SellPrice.Max /*(Shops[i].ResourcesConsumed[p].Value * 24)*/ + "</span> " + getPortFromId(Shops[i].Id).Name + "</span> ";
+                            
+                            var modifiedSell = item.PortPrices.Consumed.SellPrice.Min * (1-getPortFromId(Shops[i].Id).PortTax);
+                            buyer.push({price:modifiedSell, portID:Shops[i].Id});
+
+                            // if(item.PortPrices.Consumed.SellPrice.Min > max_sell){
+                            //     max_sell = item.PortPrices.Consumed.SellPrice.Min;
+                            // }
                             break;
                         }
                     }
@@ -218,13 +211,13 @@
  
                 // available
                 info += "<td>";
-                //info += " <span class=\"label label-default\">"
-                //            + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
-                //            + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
-                //            + "<span class=\"label label-info label-pill pull-xs-left\">" + "buys" + "</span> "
-                //            + "port name" + "</span> ";
-                //info += "<br/>";
-                //info += "<br/>";
+                info += " <span class=\"label label-default\">"
+                           + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
+                           + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
+                           + "<span class=\"label label-info label-pill pull-xs-left\">" + "buys" + "</span> "
+                           + "port name" + "</span> ";
+                info += "<br/>";
+                info += "<br/>";
  
                 info += "<ul class=\"list-group\">";
                 for (var i = 0; i < Shops.length; i++) {
@@ -237,15 +230,23 @@
                             var buyPrice = Shops[i].RegularItems[p].BuyPrice;
                             var tax = getPortFromId(Shops[i].Id).PortTax;
                             var modifiedBuy = buyPrice + buyPrice*tax;
-
-                            if(sellPrice > max_sell){
-                                max_sell = sellPrice;
-                            }
-
-                            if(modifiedBuy < min_buy && amount > 0)
+                            var modifiedSell = sellPrice - sellPrice*tax;
+                            
+                            if(amount > 0)
                             {
-                                min_buy = modifiedBuy;
+                                seller.push({price:modifiedBuy, portID:Shops[i].Id});
                             }
+
+                            buyer.push({price:modifiedSell, portID:Shops[i].Id})
+
+                            // if(sellPrice > max_sell){
+                            //     max_sell = sellPrice;
+                            // }
+
+                            // if(modifiedBuy < min_buy && amount > 0)
+                            // {
+                            //     min_buy = modifiedBuy;
+                            // }
 
  
                             info += " <span class=\"label label-default\">"
@@ -258,10 +259,33 @@
                         }
                     }
                 }
-                info += "</ul></td>";                
-                info += "<td>" + (max_sell - min_buy).toFixed(0) + "</td>";
+                info += "</ul></td>";           
+
+                var max_profit=0;
+                var max_profit_name = "";
+                var max_profit_dist=0;
+                var max_profit_dist_name = "";
+                for(var b = 0; b < buyer.length; b++){
+                    for(var s = 0; s < seller.length; s++){
+                        var profit = buyer[b]["price"] - seller[s]["price"];
+                        if(profit > max_profit){
+                            max_profit = profit;
+                            max_profit_name = getPortFromId(seller[s]["portID"]).Name + "->" + getPortFromId(buyer[b]["portID"]).Name;
+                        }
+                        var profit_dist = 1000*profit / distance_XY(getPortFromId(buyer[b]["portID"]).sourcePosition, getPortFromId(seller[s]["portID"]).sourcePosition)
+                        if(profit_dist > max_profit_dist){
+                            max_profit_dist = profit_dist;
+                            max_profit_dist_name = getPortFromId(seller[s]["portID"]).Name + "->" + getPortFromId(buyer[b]["portID"]).Name;
+                        }
+                    }
+                }
+
+                info += "<td>" + max_profit.toFixed(0) + "</td>";
+                info += "<td>" + max_profit_name + "</td>";
+                info += "<td>" + max_profit_dist.toFixed(2) + "</td>";
+                info += "<td>" + max_profit_dist_name + "</td>";
                 
-                if(max_sell > min_buy)
+                if(max_profit > 0 || showAlways)
                     return "<tr>" + info + "</tr>";
                 return "";
                     //document.getElementById("results").innerHTML += "<tr>" + info + "</tr>";
@@ -302,7 +326,7 @@
                 info += "<br/>";
                 info += "<br/>";
  
-                //info += "<ul class=\"list-group\">";
+                info += "<ul class=\"list-group\">";
                 for (var p = 0; p < portShop.RegularItems.length; p++) {
                     var item = getItemTemplateFromId(portShop.RegularItems[p].TemplateId);
                     var amount = portShop.RegularItems[p].Quantity;
@@ -315,13 +339,13 @@
                                 + "<span class=\"label label-info label-pill pull-xs-left\">" + sellPrice + "</span> "
                                 + item.Name + "</span> ";
                 }
-                //info += "</ul>";
+                info += "</ul>";
  
-                document.getElementById("results").innerHTML = info;
+                return info;
             };
  
             function setupData() {
-                var content = "<table id=\"myTable2\" style=\"width:100%\"><tr><th onclick=\"sortTable(0)\">Item</th><th>Produced</th><th>Consumed</th><th>Available</th><th onclick=\"sortTableNumeric(4)\">Profit</th></tr>";
+                var content = "<table id=\"myTable2\" style=\"width:100%\"><tr><th onclick=\"sortTable(0)\">Item</th><th>Consumed</th><th>Available</th><th onclick=\"sortTableNumeric(3)\">Profit</th><th>Ports</th><th onclick=\"sortTableNumeric(5)\">Profit/Dist</th><th>Ports</th></tr>";
                 document.getElementById("results").innerHTML = "";
 
                 var name = $$('searchCombo').getValue();
@@ -333,23 +357,27 @@
  
                 console.log(name + ", " + searchAround + ", " + searchDistance);
 
-                for (var t in ItemTemplates) {
-                 if (ItemTemplates[t].ItemType == "Resource"
-                     || ItemTemplates[t].ItemType == "Material") {
-                    content += setupItemData(ItemTemplates[t].Name);
-                }
-                }
-                content += "</table>"
-                 document.getElementById("results").innerHTML = content;
- 
+                                
                 if (templateNames.indexOf(name) != -1) {
-                    setupItemData(name);
+                    content += setupItemData(name, true);
                     showItemFilters(true);
                 }
-                if (shopNames.indexOf(name) != -1) {
-                    setupShopData(name);
+                else if (shopNames.indexOf(name) != -1) {
+                    content += setupShopData(name);
                     showItemFilters(false);
                 }
+                else{
+                    showItemFilters(true);
+                    for (var t in ItemTemplates) {
+                        // if (ItemTemplates[t].ItemType == "Resource"
+                        //     || ItemTemplates[t].ItemType == "Material") {
+                            content += setupItemData(ItemTemplates[t].Name, false);
+                        //}
+                    }
+                }
+
+                content += "</table>"
+                document.getElementById("results").innerHTML = content;
             }
  
             //console.info(shopsData);
@@ -417,6 +445,7 @@
                 }
             }
             showItemFilters(false);
+            setupData();
         }
     </script>
  
