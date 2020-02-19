@@ -229,7 +229,7 @@
 
                     for (var p = 0; p < Shops[i].RegularItems.length; p++) {
                         if (Shops[i].RegularItems[p].TemplateId == item.Id) {
-                            var amount = Shops[i].RegularItems[p].Quantity;
+                            var amount = Shops[i].RegularItems[p].Quantity;                            
                             var sellPrice = Shops[i].RegularItems[p].SellPrice;
                             var buyPrice = Shops[i].RegularItems[p].BuyPrice;
                             var tax = getPortFromId(Shops[i].Id).PortTax;
@@ -238,6 +238,10 @@
 
                             if (amount > 0) {
                                 seller.push({ price: modifiedBuy, portID: Shops[i].Id });
+                            }
+                            
+                            if(amount<0){
+                                amount = Shops[i].RegularItems[p].SellContractQuantity;
                             }
 
                             buyer.push({ price: modifiedSell, portID: Shops[i].Id })
