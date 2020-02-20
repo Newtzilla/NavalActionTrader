@@ -216,9 +216,10 @@
                 // available
                 info += "<td>";
                 info += " <span class=\"label label-default\">"
-                    + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
-                    + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
-                    + "<span class=\"label label-info label-pill pull-xs-left\">" + "buys" + "</span> "
+                    + "<span class=\"label label-warning label-pill pull-xs-left\">" + "available" + "</span> "
+                    + "<span class=\"label label-other label-pill pull-xs-left\">" + "wanted" + "</span> "
+                    + "<span class=\"label label-danger label-pill pull-xs-left\">" + "cost" + "</span> "
+                    + "<span class=\"label label-info label-pill pull-xs-left\">" + "sells for" + "</span> "
                     + "port name" + "</span> ";
                 info += "<br/>";
                 info += "<br/>";
@@ -235,6 +236,7 @@
                             var tax = getPortFromId(Shops[i].Id).PortTax;
                             var modifiedBuy = buyPrice + buyPrice * tax;
                             var modifiedSell = sellPrice - sellPrice * tax;
+                            var wanted = Shops[i].RegularItems[p].BuyContractQuantity;
 
                             if (amount > 0) {
                                 seller.push({ price: modifiedBuy, portID: Shops[i].Id });
@@ -257,7 +259,8 @@
 
 
                             info += " <span class=\"label label-default\">"
-                                + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "
+                                + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "                            
+                                + "<span class=\"label label-other label-pill pull-xs-left\">" + wanted + "</span> "
                                 + "<span class=\"label label-danger label-pill pull-xs-left\">" + buyPrice + "</span> "
                                 + "<span class=\"label label-info label-pill pull-xs-left\">" + sellPrice + "</span> "
                                 + getPortFromId(Shops[i].Id).Name + "</span> ";
@@ -326,9 +329,10 @@
                 // Stock
                 info += "<h3>Stock</h3>";
                 info += " <span class=\"label label-default\">"
-                    + "<span class=\"label label-warning label-pill pull-xs-left\">" + "quantity" + "</span> "
-                    + "<span class=\"label label-danger label-pill pull-xs-left\">" + "sells" + "</span> "
-                    + "<span class=\"label label-info label-pill pull-xs-left\">" + "buys" + "</span> "
+                    + "<span class=\"label label-warning label-pill pull-xs-left\">" + "available" + "</span> "
+                    + "<span class=\"label label-other label-pill pull-xs-left\">" + "wanted" + "</span> "
+                    + "<span class=\"label label-danger label-pill pull-xs-left\">" + "cost" + "</span> "
+                    + "<span class=\"label label-info label-pill pull-xs-left\">" + "sells for" + "</span> "
                     + "item name" + "</span> ";
                 info += "<br/>";
                 info += "<br/>";
@@ -339,9 +343,15 @@
                     var amount = portShop.RegularItems[p].Quantity;
                     var sellPrice = portShop.RegularItems[p].SellPrice;
                     var buyPrice = portShop.RegularItems[p].BuyPrice;
+                    var wanted = portShop.RegularItems[p].BuyContractQuantity;
+                    
+                    if(amount<0){
+                        amount = Shops[i].RegularItems[p].SellContractQuantity;
+                    }
 
                     info += " <span class=\"label label-default\">"
-                        + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "
+                        + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "                            
+                        + "<span class=\"label label-other label-pill pull-xs-left\">" + wanted + "</span> "
                         + "<span class=\"label label-danger label-pill pull-xs-left\">" + buyPrice + "</span> "
                         + "<span class=\"label label-info label-pill pull-xs-left\">" + sellPrice + "</span> "
                         + item.Name + "</span> ";
