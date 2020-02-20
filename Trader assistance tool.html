@@ -430,7 +430,7 @@
                                 cols:
                                     [
                                         {
-                                            view: "combo", label: "Search around port:", labelPosition: "left", labelWidth: 150, suggest: portSuggestions, id: "searchAroundCombo",
+                                            view: "combo", label: "Search around port:", labelPosition: "left", labelWidth: 150, value: "Gustavia", suggest: portSuggestions, id: "searchAroundCombo",
                                             on: {
                                                 onChange: function () {
                                                     var name = $$('searchAroundCombo').getValue();
@@ -439,7 +439,7 @@
                                             }
                                         },
                                         {
-                                            view: "slider", type: "alt", label: "Search distance:", labelWidth: 150, value: "100", id: "radiusSlider", on:
+                                            view: "slider", type: "alt", label: "Search distance:", labelWidth: 150, value: "5", id: "radiusSlider", on:
                                             {
                                                 onChange: function () {
                                                     setupData();
