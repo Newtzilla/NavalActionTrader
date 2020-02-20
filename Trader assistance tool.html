@@ -236,14 +236,14 @@
                             var tax = getPortFromId(Shops[i].Id).PortTax;
                             var modifiedBuy = buyPrice + buyPrice * tax;
                             var modifiedSell = sellPrice - sellPrice * tax;
-                            var wanted = Shops[i].RegularItems[p].BuyContractQuantity;
+                            var wanted = Shops[i].RegularItems[p].SellContractQuantity;
 
                             if (amount > 0) {
                                 seller.push({ price: modifiedBuy, portID: Shops[i].Id });
                             }
                             
                             if(amount<0){
-                                amount = Shops[i].RegularItems[p].SellContractQuantity;
+                                amount = Shops[i].RegularItems[p].BuyContractQuantity;
                             }
 
                             buyer.push({ price: modifiedSell, portID: Shops[i].Id })
@@ -343,10 +343,10 @@
                     var amount = portShop.RegularItems[p].Quantity;
                     var sellPrice = portShop.RegularItems[p].SellPrice;
                     var buyPrice = portShop.RegularItems[p].BuyPrice;
-                    var wanted = portShop.RegularItems[p].BuyContractQuantity;
+                    var wanted = portShop.RegularItems[p].SellContractQuantity;
                     
                     if(amount<0){
-                        amount = Shops[i].RegularItems[p].SellContractQuantity;
+                        amount = Shops[i].RegularItems[p].BuyContractQuantity;
                     }
 
                     info += " <span class=\"label label-default\">"
