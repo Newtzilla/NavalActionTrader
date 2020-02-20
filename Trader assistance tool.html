@@ -245,6 +245,11 @@
                             if(amount<0){
                                 amount = Shops[i].RegularItems[p].BuyContractQuantity;
                             }
+                            
+                            if(amount < 0)
+                                amount = 0;
+                            if(wanted < 0)
+                                wanted = 0;
 
                             buyer.push({ price: modifiedSell, portID: Shops[i].Id })
 
@@ -348,6 +353,11 @@
                     if(amount<0){
                         amount = Shops[i].RegularItems[p].BuyContractQuantity;
                     }
+                    
+                    if(amount < 0)
+                        amount = 0;
+                    if(wanted < 0)
+                        wanted = 0;
 
                     info += " <span class=\"label label-default\">"
                         + "<span class=\"label label-warning label-pill pull-xs-left\">" + amount + "</span> "                            
